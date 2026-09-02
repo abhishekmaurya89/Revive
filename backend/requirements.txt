@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+python-dotenv
+motor
+langgraph
+langchain
+langchain-google-genai
+langsmith
+faker
+pandas
+httpx
+pydantic
