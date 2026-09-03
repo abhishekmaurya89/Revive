@@ -9,6 +9,9 @@ from langgraph.graph import END, START, StateGraph
 
 
 def route_after_policy(state: RecoveryState):
+    """
+    Decide what happens after the deterministic policy check.
+    """
 
     if state["requires_approval"]:
         return "approval"
@@ -20,22 +23,38 @@ def route_after_policy(state: RecoveryState):
 
 
 def blocked(state: RecoveryState) -> RecoveryState:
+    """
+    Stop recovery when the policy does not allow execution.
+    """
 
     return {
         "execution_success": False,
         "execution_message": (f"Recovery blocked: {state['policy_reason']}"),
+        "recovered_amount": 0,
     }
 
 
 def approval(state: RecoveryState) -> RecoveryState:
+    """
+    Stop execution when human approval is required.
+
+    Actual human-in-the-loop approval will be added later.
+    """
 
     return {
         "execution_success": False,
         "execution_message": (f"Human approval required: {state['policy_reason']}"),
+        "recovered_amount": 0,
     }
 
 
 def execute(state: RecoveryState) -> RecoveryState:
+    """
+    Execute the bounded recovery action.
+
+    The LLM does not directly interact with Razorpay.
+    The deterministic recovery service performs the action.
+    """
 
     result = execute_recovery(
         payment=state["payment"],
@@ -46,10 +65,16 @@ def execute(state: RecoveryState) -> RecoveryState:
         "execution_success": result["success"],
         "execution_message": result["message"],
         "recovered_amount": result["recovered_amount"],
+        "recovery_id": result.get("recovery_id"),
+        "payment_link": result.get("payment_link"),
+        "payment_link_id": result.get("payment_link_id"),
     }
 
 
 def build_recovery_graph():
+    """
+    Build the Revive revenue-recovery workflow.
+    """
 
     graph = StateGraph(RecoveryState)
 
@@ -73,7 +98,6 @@ def build_recovery_graph():
             "approval": "approval",
         },
     )
-
     graph.add_edge("execute", END)
     graph.add_edge("blocked", END)
     graph.add_edge("approval", END)

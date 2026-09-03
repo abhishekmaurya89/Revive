@@ -18,4 +18,7 @@ class RecoveryState(TypedDict, total=False):
     execution_message: str
     recovered_amount: int
 
+    payment_link: str
+    recovery_id: str
+
     audit_events: list[dict]

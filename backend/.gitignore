@@ -3,3 +3,4 @@ scripts/
 .env
 .venv/
 __pycache__/
+run_agent.py
