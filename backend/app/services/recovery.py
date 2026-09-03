@@ -1,54 +1,44 @@
-from uuid import uuid4
-
 from app.agents.schemas import RecoveryAction
 from app.models.payment import PaymentEvent
-
-
-class RecoveryResult:
-    def __init__(
-        self,
-        success: bool,
-        action: RecoveryAction,
-        message: str,
-        recovered_amount: int = 0,
-    ):
-        self.success = success
-        self.action = action
-        self.message = message
-        self.recovered_amount = recovered_amount
+from app.services.razorpay_client import client
 
 
 def execute_recovery(
     payment: PaymentEvent,
     action: RecoveryAction,
-) -> RecoveryResult:
-
-    if action == RecoveryAction.RETRY:
-        return RecoveryResult(
-            success=True,
-            action=action,
-            message="Payment retry succeeded.",
-            recovered_amount=payment.amount,
-        )
+):
 
     if action == RecoveryAction.PAYMENT_LINK:
-        link_id = uuid4().hex[:12]
 
-        return RecoveryResult(
-            success=True,
-            action=action,
-            message=f"Payment link created: {link_id}",
-        )
+        response = client.payment_link.create({
+            "amount": payment.amount,
+            "currency": payment.currency,
+            "description": (
+                f"Recovery for {payment.order_id}"
+            ),
+            "customer": {
+                "name": payment.customer_id,
+            },
+            "notify": {
+                "sms": False,
+                "email": False,
+            },
+        })
 
-    if action == RecoveryAction.REMINDER:
-        return RecoveryResult(
-            success=True,
-            action=action,
-            message="Recovery reminder queued.",
-        )
+        return {
+            "success": True,
+            "action": action.value,
+            "message": "Payment link created.",
+            "payment_link": response.get("short_url"),
+            "recovered_amount": 0,
+        }
 
-    return RecoveryResult(
-        success=False,
-        action=action,
-        message="No executable recovery action.",
-    )
+    return {
+        "success": False,
+        "action": action.value,
+        "message": (
+            "Recovery action not yet connected "
+            "to a Razorpay API."
+        ),
+        "recovered_amount": 0,
+    }

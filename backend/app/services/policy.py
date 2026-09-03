@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from app.agents.schemas import RecoveryAction, RecoveryDecision
 from app.models.payment import PaymentEvent
 
-
 MAX_AUTO_RECOVERY_AMOUNT = 10_000
 MAX_RETRIES = 2
 
@@ -20,7 +19,6 @@ def validate_recovery(
     decision: RecoveryDecision,
 ) -> PolicyResult:
 
-    # Never recover an already successful payment.
     if payment.status.value == "success":
         return PolicyResult(
             allowed=False,
@@ -28,7 +26,6 @@ def validate_recovery(
             reason="Payment is already successful.",
         )
 
-    # Retry protection.
     if (
         decision.action == RecoveryAction.RETRY
         and payment.attempt_count >= MAX_RETRIES
@@ -39,7 +36,6 @@ def validate_recovery(
             reason="Maximum retry limit reached.",
         )
 
-    # High-value transactions require approval.
     if payment.amount > MAX_AUTO_RECOVERY_AMOUNT:
         return PolicyResult(
             allowed=False,
@@ -47,7 +43,7 @@ def validate_recovery(
             reason="Transaction exceeds automatic recovery limit.",
         )
 
-    # Unknown decisions should never execute.
+
     if decision.action == RecoveryAction.NO_ACTION:
         return PolicyResult(
             allowed=False,

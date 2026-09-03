@@ -12,3 +12,4 @@ faker
 pandas
 httpx
 pydantic
+razorpay

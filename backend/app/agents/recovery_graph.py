@@ -1,11 +1,11 @@
-from langgraph.graph import END, START, StateGraph
-
 from app.agents.nodes import (
     choose_recovery,
     diagnose,
     policy_check,
 )
 from app.agents.state import RecoveryState
+from app.services.recovery import execute_recovery
+from langgraph.graph import END, START, StateGraph
 
 
 def route_after_policy(state: RecoveryState):
@@ -23,9 +23,7 @@ def blocked(state: RecoveryState) -> RecoveryState:
 
     return {
         "execution_success": False,
-        "execution_message": (
-            f"Recovery blocked: {state['policy_reason']}"
-        ),
+        "execution_message": (f"Recovery blocked: {state['policy_reason']}"),
     }
 
 
@@ -33,28 +31,21 @@ def approval(state: RecoveryState) -> RecoveryState:
 
     return {
         "execution_success": False,
-        "execution_message": (
-            f"Human approval required: "
-            f"{state['policy_reason']}"
-        ),
+        "execution_message": (f"Human approval required: {state['policy_reason']}"),
     }
 
 
 def execute(state: RecoveryState) -> RecoveryState:
 
-    # Temporary simulation.
-    # Razorpay integration comes next.
+    result = execute_recovery(
+        payment=state["payment"],
+        action=state["decision"].action,
+    )
 
     return {
-        "execution_success": True,
-        "execution_message": (
-            f"Executed {state['decision'].action.value}"
-        ),
-        "recovered_amount": (
-            state["payment"].amount
-            if state["decision"].action.value == "retry"
-            else 0
-        ),
+        "execution_success": result["success"],
+        "execution_message": result["message"],
+        "recovered_amount": result["recovered_amount"],
     }
 
 
