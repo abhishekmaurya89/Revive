@@ -1,7 +1,5 @@
 from datetime import datetime, timezone
 
-from app.database import recovery_collection
-
 
 async def save_recovery(record: dict):
     await recovery_collection.update_one(

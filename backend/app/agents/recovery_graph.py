@@ -48,7 +48,7 @@ def approval(state: RecoveryState) -> RecoveryState:
     }
 
 
-def execute(state: RecoveryState) -> RecoveryState:
+async def execute(state: RecoveryState) -> RecoveryState:
     """
     Execute the bounded recovery action.
 
@@ -56,7 +56,7 @@ def execute(state: RecoveryState) -> RecoveryState:
     The deterministic recovery service performs the action.
     """
 
-    result = execute_recovery(
+    result = await execute_recovery(
         payment=state["payment"],
         action=state["decision"].action,
     )

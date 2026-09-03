@@ -2,7 +2,7 @@ from app.config import settings
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 llm = ChatGoogleGenerativeAI(
-    model="gemini-3.8-flash",
+    model="gemini-3.5-flash-lite",
     temperature=0,
     google_api_key=settings.google_api_key,
 )

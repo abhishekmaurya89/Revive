@@ -1,9 +1,11 @@
+from pymongo import MongoClient
+
 from app.config import settings
-from motor.motor_asyncio import AsyncIOMotorClient
 
-mongo_client = AsyncIOMotorClient(settings.mongodb_uri)
 
-database = mongo_client[settings.mongodb_database]
+client = MongoClient(settings.mongodb_url)
 
-recovery_collection = database["recoveries"]
+db = client[settings.mongodb_database]
 
+payments_collection = db["payments"]
+recoveries_collection = db["recoveries"]

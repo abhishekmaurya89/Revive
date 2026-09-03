@@ -2,21 +2,23 @@ from uuid import uuid4
 
 from app.agents.schemas import RecoveryAction
 from app.models.payment import PaymentEvent
+from app.services.recovery_repository import save_recovery
 from app.services.razorpay_client import client
 
 
-def execute_recovery(
+async def execute_recovery(
     payment: PaymentEvent,
     action: RecoveryAction,
 ):
-    recovery_id = f"rec_{uuid4().hex[:12]}"
 
     if action == RecoveryAction.PAYMENT_LINK:
+        recovery_id = f"rec_{uuid4().hex[:12]}"
+
         response = client.payment_link.create(
             {
                 "amount": payment.amount,
                 "currency": payment.currency,
-                "description": f"Recovery for {payment.order_id}",
+                "description": (f"Recovery for {payment.order_id}"),
                 "customer": {
                     "name": payment.customer_id,
                 },
@@ -26,9 +28,27 @@ def execute_recovery(
                 },
                 "notes": {
                     "recovery_id": recovery_id,
-                    "payment_id": payment.payment_id,
                     "order_id": payment.order_id,
+                    "payment_id": payment.payment_id,
                 },
+            }
+        )
+
+        payment_link_id = response.get("id")
+        payment_link = response.get("short_url")
+
+        await save_recovery(
+            {
+                "recovery_id": recovery_id,
+                "payment_id": payment.payment_id,
+                "order_id": payment.order_id,
+                "amount": payment.amount,
+                "currency": payment.currency,
+                "action": action.value,
+                "status": "payment_link_created",
+                "payment_link_id": payment_link_id,
+                "payment_link": payment_link,
+                "recovered_amount": 0,
             }
         )
 
@@ -36,8 +56,8 @@ def execute_recovery(
             "success": True,
             "action": action.value,
             "message": "Payment link created.",
-            "payment_link": response.get("short_url"),
-            "payment_link_id": response.get("id"),
+            "payment_link": payment_link,
+            "payment_link_id": payment_link_id,
             "recovery_id": recovery_id,
             "recovered_amount": 0,
         }
@@ -45,7 +65,6 @@ def execute_recovery(
     return {
         "success": False,
         "action": action.value,
-        "message": "Recovery action not connected.",
-        "recovery_id": recovery_id,
+        "message": ("Recovery action not connected to a Razorpay API."),
         "recovered_amount": 0,
     }
