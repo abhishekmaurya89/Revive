@@ -32,5 +32,4 @@ class PaymentEvent(BaseModel):
     failure_reason: str | None = None
 
     attempt_count: int = Field(default=0, ge=0)
-
     created_at: datetime
