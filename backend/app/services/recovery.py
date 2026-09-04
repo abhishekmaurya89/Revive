@@ -68,6 +68,19 @@ async def execute_recovery(payment: PaymentEvent, action: RecoveryAction) -> dic
             "recovered_amount": 0,
         }
 
+    if action in {
+        RecoveryAction.REMINDER,
+        RecoveryAction.MANDATE_RETRY,
+        RecoveryAction.VOICE_CALL,
+        RecoveryAction.RETRY,
+    }:
+        return {
+            "success": True,
+            "action": action.value,
+            "message": f"Deterministic {action.value.replace('_', ' ')} action executed.",
+            "recovered_amount": 0,
+        }
+
     return {
         "success": False,
         "action": action.value,

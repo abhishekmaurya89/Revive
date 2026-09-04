@@ -41,14 +41,18 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
-  chaseOne: (invoiceId) =>
+  chaseOne: (invoiceId) => 
     request(`/receivables/${invoiceId}/chase`, { method: "POST" }),
   chaseAll: () => request("/receivables/batch/chase", { method: "POST" }),
   receivableAudit: (invoiceId) => request(`/receivables/${invoiceId}/audit`),
 
-  runBatch: () => request("/batch/run", { method: "POST" }),
+  runBatch: (portfolioSize = 42) => request("/batch/run", {
+    method: "POST",
+    body: JSON.stringify({ portfolio_size: portfolioSize }),
+  }),
   batchHistory: () => request("/batch/history"),
   batchDetail: (batchId) => request(`/batch/${batchId}`),
+  batchAudit: (batchId) => request(`/batch/${batchId}/audit`),
 
   auditFeed: (limit = 200) => request(`/audit?limit=${limit}`),
 

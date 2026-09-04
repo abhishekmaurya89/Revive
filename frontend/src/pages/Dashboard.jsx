@@ -13,6 +13,7 @@ export default function Dashboard() {
     []
   );
   const { data: auditData } = useApi(() => api.auditFeed(8), []);
+  const { data: batchData } = useApi(() => api.batchHistory(), []);
 
   if (summaryLoading) {
     return <div className="text-muted">Loading recovery summary…</div>;
@@ -29,43 +30,41 @@ export default function Dashboard() {
 
   const payments = summary?.payments || {};
   const receivables = summary?.receivables || {};
+  const latestBatch = batchData?.batches?.[0];
 
   return (
     <div className="space-y-10">
-      <div>
-        <div className="text-sm text-muted">Total revenue recovered</div>
-        <div className="mt-2 font-display text-6xl text-text">
-          {formatMoney(summary?.recovered_amount)}
-        </div>
-        <div className="mt-2 text-sm text-muted">
-          Across failed payments, abandoned checkouts, and overdue
-          receivables — every dollar here was at risk before the agent acted.
+      <div className="border border-border bg-surface p-6 lg:p-8">
+        <div className="text-xs uppercase tracking-[0.18em] text-amber">Revive recovery command center</div>
+        <div className="mt-2 flex flex-wrap items-end justify-between gap-6">
+          <div><div className="text-sm text-muted">Revenue at risk</div><div className="mt-1 font-display text-5xl text-text">{formatMoney(latestBatch?.at_risk_amount || receivables.at_risk_amount)}</div><div className="mt-2 max-w-xl text-sm text-muted">Revive diagnoses each failure, applies policy, and recovers eligible payments while visibly stopping unsafe actions.</div></div>
+          <Link to="/batches" className="bg-amber px-4 py-2.5 text-sm font-medium text-ink hover:bg-[#ffc15b]">Run recovery batch</Link>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
-          label="Payment recoveries"
-          value={payments.successful_recoveries ?? 0}
-          sublabel={`${payments.recovery_rate ?? 0}% of ${payments.total_failed_or_abandoned ?? 0} at-risk`}
+          label="₹ recovered"
+          value={formatMoney(latestBatch?.recovered_amount || summary?.recovered_amount)}
+          sublabel={`${latestBatch?.recovery_rate ?? payments.recovery_rate ?? 0}% recovery rate`}
           accent="text-teal"
         />
         <StatCard
           label="Escalated / pending approval"
-          value={payments.escalated_or_pending_approval ?? 0}
-          sublabel="Above auto-recovery limit or unclear cause"
+          value={latestBatch?.requires_approval ?? payments.escalated_or_pending_approval ?? 0}
+          sublabel="Human approval required"
           accent="text-amber"
         />
         <StatCard
           label="Stopped by policy"
-          value={payments.stopped_by_policy ?? 0}
+          value={latestBatch?.stopped ?? payments.stopped_by_policy ?? 0}
           sublabel="Hit a stopping rule — no further auto-contact"
           accent="text-red"
         />
         <StatCard
           label="Receivables at risk"
-          value={formatMoney(receivables.at_risk_amount)}
-          sublabel={`${receivables.open ?? 0} open invoices`}
+          value={latestBatch?.accounts_analyzed ?? receivables.open ?? 0}
+          sublabel="accounts analyzed in latest batch"
           accent="text-blue"
         />
       </div>

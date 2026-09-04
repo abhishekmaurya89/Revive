@@ -2,13 +2,18 @@ from app.services.audit import get_audit_trail, list_recent_audit_events
 from app.services.batch import run_batch
 from app.services.batch_repository import get_batch_run, list_batch_runs
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
 router = APIRouter()
 
 
+class BatchRunInput(BaseModel):
+    portfolio_size: int = Field(default=42, ge=20, le=100)
+
+
 @router.post("/run")
-async def run_batch_now():
-    return run_batch()
+async def run_batch_now(payload: BatchRunInput | None = None):
+    return run_batch(payload.portfolio_size if payload else 42)
 
 
 @router.get("/history")
