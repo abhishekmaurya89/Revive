@@ -10,6 +10,8 @@ function outcomeLabel(caseItem) {
   if (caseItem.stopped) return `Stopped: ${caseItem.policy_code.replaceAll("_", " ")}`;
   if (caseItem.requires_approval) return "Human approval";
   if (caseItem.recovered_amount) return "Payment recovered";
+  if (caseItem.action === "reminder") return "Reminder sent";
+  if (caseItem.action === "voice_call") return "Voice call queued";
   return "Payment link executed";
 }
 

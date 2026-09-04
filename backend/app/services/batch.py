@@ -63,6 +63,13 @@ def _demo_case(batch_id: str, index: int) -> dict:
         action = "payment_link" if index < 15 else "reminder" if index < 23 else "voice_call"
         outcome = "executed"
     recovered_amount = amount if recovered else 0
+    execution_message = (
+        "Payment link created and payment captured." if recovered else
+        "Payment link created; awaiting customer payment." if action == "payment_link" and not approval else
+        "Reminder sent to the customer." if action == "reminder" else
+        "Voice call queued for the collections team." if action == "voice_call" else
+        "Held for human approval."
+    )
     if recovered:
         mark_payment_success(payment_id, amount)
     recovery_id = f"rec_{batch_id}_{index + 1:03d}"
@@ -74,7 +81,7 @@ def _demo_case(batch_id: str, index: int) -> dict:
         "policy_code": policy_code, "policy_allowed": not approval and not stopped,
         "requires_approval": approval, "policy_reason": policy_reason, "stopped": stopped,
         "execution_success": not approval and not stopped,
-        "execution_message": "Payment link created and payment captured." if recovered else "Payment link created; awaiting customer payment." if not approval else "Held for human approval.",
+        "execution_message": execution_message,
         "recovered_amount": recovered_amount,
         "recovered_at": datetime.now(timezone.utc) if recovered else None,
         "payment_link": f"https://rzp.io/demo/{recovery_id}" if action == "payment_link" and not stopped else None,
@@ -84,7 +91,7 @@ def _demo_case(batch_id: str, index: int) -> dict:
         ("diagnosis", diagnosis),
         ("decision", {"action": action, "reason": policy_reason, "confidence": diagnosis["confidence"]}),
         ("policy_check", {"allowed": not approval and not stopped, "requires_approval": approval, "code": policy_code, "reason": policy_reason, "stopped": stopped}),
-        ("execution", {"success": not approval and not stopped, "message": "Payment link executed." if not approval and not stopped else "Action held by policy.", "recovered_amount": recovered_amount}),
+        ("execution", {"success": not approval and not stopped, "message": execution_message if not stopped else "Action held by policy.", "recovered_amount": recovered_amount}),
     ]:
         record_audit_event("payment", payment_id, event_type, details, actor="revive-agent")
     if recovered:
