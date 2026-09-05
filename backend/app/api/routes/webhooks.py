@@ -5,7 +5,13 @@ from app.config import settings
 from app.models.payment import FailureType, PaymentEvent, PaymentStatus
 from app.services.payment_repository import mark_payment_success
 from app.services.recovery_flow import process_payment_event
-from app.services.recovery_repository import mark_recovered, recovery_exists
+from app.services.audit import record_audit_event
+from app.services.receivables_repository import mark_receivable_recovered
+from app.services.recovery_repository import (
+    mark_recovered,
+    mark_recovered_by_payment_id,
+    recovery_exists,
+)
 from app.services.razorpay_client import client
 from fastapi import APIRouter, Header, HTTPException, Request
 
@@ -61,7 +67,16 @@ async def razorpay_webhook(
         payment_id = payment_entity.get("id")
         amount = payment_entity.get("amount")
         if payment_id:
+            recovery_updated = mark_recovered_by_payment_id(payment_id, amount or 0)
             mark_payment_success(payment_id, amount)
+            if recovery_updated:
+                record_audit_event(
+                    "payment",
+                    payment_id,
+                    "payment_recovered",
+                    {"amount": amount or 0, "source": "razorpay.payment.captured"},
+                    actor="razorpay",
+                )
         return {"status": "processed", "event": event_type, "payment_id": payment_id}
 
     if event_type == "payment_link.paid":
@@ -70,12 +85,23 @@ async def razorpay_webhook(
         payment_entity = payload.get("payment", {}).get("entity", {})
         payment_link_id = link_entity.get("id")
         payment_id = payment_entity.get("id")
-        amount = payment_entity.get("amount") or link_entity.get("amount_paid") or 0
+        amount = link_entity.get("amount_paid") or payment_entity.get("amount") or 0
+        invoice_id = (link_entity.get("notes") or {}).get("invoice_id")
 
         if payment_link_id:
             mark_recovered(payment_link_id, payment_id, amount)
+        receivable_updated = bool(invoice_id and mark_receivable_recovered(invoice_id, amount))
         if payment_id:
             mark_payment_success(payment_id, amount)
+
+        if receivable_updated:
+            record_audit_event(
+                "receivable",
+                invoice_id,
+                "payment_recovered",
+                {"amount": amount, "payment_link_id": payment_link_id, "source": "razorpay.payment_link.paid"},
+                actor="razorpay",
+            )
 
         return {
             "status": "processed",
@@ -114,6 +140,9 @@ async def razorpay_webhook(
             or payment_entity.get("contact")
             or "unknown"
         ),
+        customer_email=payment_entity.get("email"),
+        customer_contact=payment_entity.get("contact"),
+        subscription_id=payment_entity.get("subscription_id"),
         amount=amount,
         currency=payment_entity.get("currency", "INR"),
         status=PaymentStatus.FAILED,

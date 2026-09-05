@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     razorpay_key_id: str
     razorpay_key_secret: str
     razorpay_webhook_secret: str
+    checkout_event_secret: str | None = None
 
     mongodb_url: str = "mongodb://localhost:27017"
     mongodb_database: str = "revive"

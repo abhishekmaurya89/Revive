@@ -22,6 +22,9 @@ class PaymentEvent(BaseModel):
     payment_id: str
     order_id: str
     customer_id: str
+    customer_email: str | None = None
+    customer_contact: str | None = None
+    subscription_id: str | None = None
 
     amount: int = Field(gt=0)
     currency: str = "INR"

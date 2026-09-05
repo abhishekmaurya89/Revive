@@ -31,12 +31,14 @@ Select exactly one action from:
 retry, payment_link, reminder, mandate_retry, voice_call, escalate, no_action.
 
 Rules:
-- Customer-action or abandoned-checkout failures can use payment_link or reminder.
+- Only payment_link is currently connected to an external execution provider.
+- Customer-action or abandoned-checkout failures should choose payment_link when
+    policy may allow recovery; do not choose reminder for an automated case.
 - Transient/network failures may use retry, subject to policy.
 - Bank declines should generally not be blindly retried.
-- Recurring/subscription (mandate) failures should prefer mandate_retry over a blind retry.
-- Use voice_call only when lower-touch channels (reminder, payment_link) have already
-  been attempted without success (see attempt_count) and the amount justifies it.
+- Recurring/subscription failures should use a payment_link fallback because
+    mandate retry is not connected to an external provider in this service.
+- Use voice_call only as a recommendation for human review; it is not automated.
 - Unknown failures should use escalate.
 - If evidence is insufficient, prefer escalate.
 

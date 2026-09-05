@@ -8,11 +8,13 @@ import { daysBetween, formatDate, formatMoney } from "../lib/format";
 function AddReceivableForm({ onCreated }) {
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState({
-    invoice_id: `INV-${Math.floor(Math.random() * 9000 + 1000)}`,
-    customer_id: "cust_demo",
-    customer_name: "Demo Customer Pvt Ltd",
-    amount: 5000000,
-    due_date: new Date().toISOString().slice(0, 10),
+    invoice_id: "",
+    customer_id: "",
+    customer_name: "",
+    customer_email: "",
+    customer_contact: "",
+    amount: "",
+    due_date: "",
   });
   const [error, setError] = useState(null);
 
@@ -46,7 +48,10 @@ function AddReceivableForm({ onCreated }) {
     >
       {[
         ["invoice_id", "Invoice ID"],
+        ["customer_id", "Customer ID"],
         ["customer_name", "Customer"],
+        ["customer_email", "Customer email"],
+        ["customer_contact", "Customer phone"],
         ["amount", "Amount (paise)"],
         ["due_date", "Due date"],
       ].map(([name, label]) => (
@@ -89,15 +94,19 @@ function ReceivableRow({ receivable, onChanged }) {
   const [paidAmount, setPaidAmount] = useState(receivable.amount);
   const [busy, setBusy] = useState(false);
   const [lastAction, setLastAction] = useState(null);
+  const [actionError, setActionError] = useState(null);
 
   const daysOverdue = daysBetween(receivable.due_date);
 
   const chase = async () => {
     setBusy(true);
+    setActionError(null);
     try {
       const result = await api.chaseOne(receivable.invoice_id);
       setLastAction(`${result.action} — ${result.reason}`);
       onChanged();
+    } catch (err) {
+      setActionError(err.message);
     } finally {
       setBusy(false);
     }
@@ -106,6 +115,7 @@ function ReceivableRow({ receivable, onChanged }) {
   const submitPromise = async (e) => {
     e.preventDefault();
     setBusy(true);
+    setActionError(null);
     try {
       await api.promiseToPay(receivable.invoice_id, {
         promise_to_pay_date: promiseDate,
@@ -113,6 +123,8 @@ function ReceivableRow({ receivable, onChanged }) {
       });
       setMode(null);
       onChanged();
+    } catch (err) {
+      setActionError(err.message);
     } finally {
       setBusy(false);
     }
@@ -121,10 +133,13 @@ function ReceivableRow({ receivable, onChanged }) {
   const submitPaid = async (e) => {
     e.preventDefault();
     setBusy(true);
+    setActionError(null);
     try {
       await api.markPaid(receivable.invoice_id, { recovered_amount: Number(paidAmount) });
       setMode(null);
       onChanged();
+    } catch (err) {
+      setActionError(err.message);
     } finally {
       setBusy(false);
     }
@@ -174,6 +189,19 @@ function ReceivableRow({ receivable, onChanged }) {
           </div>
           {lastAction ? (
             <div className="mt-2 text-xs text-teal">{lastAction}</div>
+          ) : null}
+          {actionError ? (
+            <div className="mt-2 text-xs text-red">{actionError}</div>
+          ) : null}
+          {receivable.payment_link ? (
+            <a
+              href={receivable.payment_link}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 block text-xs text-blue underline"
+            >
+              Open Razorpay payment link
+            </a>
           ) : null}
         </td>
       </tr>
@@ -232,7 +260,7 @@ function ReceivableRow({ receivable, onChanged }) {
   );
 }
 
-function ChaseAllButton({ onDone }) {
+function ChaseAllButton({ onDone, onError }) {
   const [chasing, setChasing] = useState(false);
 
   const run = async () => {
@@ -240,6 +268,8 @@ function ChaseAllButton({ onDone }) {
     try {
       const result = await api.chaseAll();
       onDone(result);
+    } catch (err) {
+      onError(err.message);
     } finally {
       setChasing(false);
     }
@@ -259,6 +289,7 @@ function ChaseAllButton({ onDone }) {
 export default function Receivables() {
   const { data, refetch } = useApi(() => api.receivables(), []);
   const [chaseResult, setChaseResult] = useState(null);
+  const [chaseError, setChaseError] = useState(null);
   const receivables = data?.receivables || [];
 
   return (
@@ -275,9 +306,11 @@ export default function Receivables() {
         <div className="flex gap-3">
           <ChaseAllButton
             onDone={(result) => {
+              setChaseError(null);
               setChaseResult(result);
               refetch();
             }}
+            onError={setChaseError}
           />
           <AddReceivableForm onCreated={refetch} />
         </div>
@@ -287,6 +320,11 @@ export default function Receivables() {
         <div className="border border-teal/30 bg-teal/5 px-4 py-3 text-sm text-teal">
           Evaluated {chaseResult.evaluated} · contacted {chaseResult.contacted} ·
           escalated {chaseResult.escalated} · stopped {chaseResult.stopped}
+        </div>
+      ) : null}
+      {chaseError ? (
+        <div className="border border-red/30 bg-red/5 px-4 py-3 text-sm text-red">
+          {chaseError}
         </div>
       ) : null}
 

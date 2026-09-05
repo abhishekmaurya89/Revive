@@ -58,6 +58,7 @@ async def process_payment_event(payment: PaymentEvent) -> dict:
             "recovery_id": recovery_id,
             "payment_id": payment.payment_id,
             "order_id": payment.order_id,
+            "subscription_id": payment.subscription_id,
             "channel": payment.status.value,
             "action": decision.action.value if decision else None,
             "confidence": decision.confidence if decision else None,

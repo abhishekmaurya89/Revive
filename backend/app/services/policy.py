@@ -9,9 +9,6 @@ from app.models.receivable import ChaseAction, Receivable, ReceivableStatus
 # human in the loop. Everything else is either blocked or routed to approval.
 AUTO_EXECUTABLE_ACTIONS = {
     RecoveryAction.PAYMENT_LINK,
-    RecoveryAction.REMINDER,
-    RecoveryAction.MANDATE_RETRY,
-    RecoveryAction.VOICE_CALL,
 }
 
 

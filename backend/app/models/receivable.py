@@ -29,6 +29,8 @@ class Receivable(BaseModel):
     invoice_id: str
     customer_id: str
     customer_name: str
+    customer_email: str | None = None
+    customer_contact: str | None = None
     amount: int = Field(gt=0)
     currency: str = "INR"
     due_date: date
@@ -44,6 +46,8 @@ class Receivable(BaseModel):
     promise_kept: bool | None = None
 
     recovered_amount: int = 0
+    payment_link_id: str | None = None
+    payment_link: str | None = None
     language_channel: str = "email"  # e.g. email, sms, voice_hinglish
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

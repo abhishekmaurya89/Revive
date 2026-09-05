@@ -56,14 +56,4 @@ export const api = {
 
   auditFeed: (limit = 200) => request(`/audit?limit=${limit}`),
 
-  simulateCheckoutAbandoned: (payload) =>
-    request("/events/checkout-abandoned", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
-  simulateSubscriptionFailed: (payload) =>
-    request("/events/subscription-failed", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
 };

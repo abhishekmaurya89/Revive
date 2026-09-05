@@ -26,7 +26,7 @@ app.add_middleware(
 )
 
 app.include_router(webhook_router, prefix="/webhooks", tags=["Webhooks"])
-app.include_router(events_router, prefix="/events", tags=["Events"])
+app.include_router(events_router, prefix="/events", tags=["Revenue events"])
 app.include_router(recovery_router, prefix="/recovery", tags=["Recovery"])
 app.include_router(receivables_router, prefix="/receivables", tags=["Receivables"])
 app.include_router(batch_router, prefix="/batch", tags=["Batch"])

@@ -10,18 +10,22 @@ async def execute_recovery(payment: PaymentEvent, action: RecoveryAction) -> dic
     if action == RecoveryAction.PAYMENT_LINK:
         recovery_id = f"rec_{uuid4().hex[:12]}"
 
+        customer = {"name": payment.customer_id}
+        if payment.customer_email:
+            customer["email"] = payment.customer_email
+        if payment.customer_contact:
+            customer["contact"] = payment.customer_contact
+
         response = client.payment_link.create(
             {
                 "amount": payment.amount,
                 "currency": payment.currency,
                 "description": f"Recovery for {payment.order_id}",
                 "reference_id": recovery_id,
-                "customer": {
-                    "name": payment.customer_id,
-                },
+                "customer": customer,
                 "notify": {
-                    "sms": False,
-                    "email": False,
+                    "sms": bool(payment.customer_contact),
+                    "email": bool(payment.customer_email),
                 },
                 "reminder_enable": False,
                 "notes": {
@@ -48,6 +52,7 @@ async def execute_recovery(payment: PaymentEvent, action: RecoveryAction) -> dic
                 "recovery_id": recovery_id,
                 "payment_id": payment.payment_id,
                 "order_id": payment.order_id,
+                "subscription_id": payment.subscription_id,
                 "amount": payment.amount,
                 "currency": payment.currency,
                 "action": action.value,
@@ -65,19 +70,6 @@ async def execute_recovery(payment: PaymentEvent, action: RecoveryAction) -> dic
             "payment_link": payment_link,
             "payment_link_id": payment_link_id,
             "recovery_id": recovery_id,
-            "recovered_amount": 0,
-        }
-
-    if action in {
-        RecoveryAction.REMINDER,
-        RecoveryAction.MANDATE_RETRY,
-        RecoveryAction.VOICE_CALL,
-        RecoveryAction.RETRY,
-    }:
-        return {
-            "success": True,
-            "action": action.value,
-            "message": f"Deterministic {action.value.replace('_', ' ')} action executed.",
             "recovered_amount": 0,
         }
 

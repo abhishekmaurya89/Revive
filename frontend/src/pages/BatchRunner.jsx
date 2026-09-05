@@ -7,12 +7,12 @@ import StatusBadge from "../components/StatusBadge";
 import { formatMoney } from "../lib/format";
 
 function outcomeLabel(caseItem) {
-  if (caseItem.stopped) return `Stopped: ${caseItem.policy_code.replaceAll("_", " ")}`;
+  if (caseItem.stopped) return `Stopped: ${(caseItem.policy_code || "policy").replaceAll("_", " ")}`;
   if (caseItem.requires_approval) return "Human approval";
   if (caseItem.recovered_amount) return "Payment recovered";
-  if (caseItem.action === "reminder") return "Reminder sent";
-  if (caseItem.action === "voice_call") return "Voice call queued";
-  return "Payment link executed";
+  if (caseItem.action === "payment_link") return "Razorpay payment link created";
+  if (caseItem.action) return `${caseItem.action.replaceAll("_", " ")} requires review`;
+  return "No recovery action recorded";
 }
 
 export default function BatchRunner() {
@@ -51,7 +51,7 @@ export default function BatchRunner() {
         <div>
           <div className="font-display text-3xl text-text">Run the recovery batch.</div>
           <div className="mt-1 max-w-xl text-sm text-muted">
-            Diagnose every at-risk account, apply deterministic guardrails, and execute eligible payment links in one controlled pass.
+            Review failed Razorpay payments already received through webhooks and inspect their recovery outcomes.
           </div>
         </div>
         <label className="min-w-[220px] text-xs text-muted">
@@ -64,7 +64,7 @@ export default function BatchRunner() {
           disabled={running}
           className="border border-amber/50 bg-amber/10 px-4 py-2 text-sm text-amber hover:bg-amber/20 disabled:opacity-50"
         >
-          {running ? "Analyzing portfolio..." : "Run recovery batch"}
+          {running ? "Reviewing Razorpay events..." : "Review Razorpay payments"}
         </button>
       </div>
       {error ? (
@@ -86,7 +86,7 @@ export default function BatchRunner() {
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <div className="border border-border bg-surface p-3 text-center text-xs text-muted"><span className="font-mono text-lg text-text">{lastRun.accounts_analyzed}</span><br />accounts analyzed</div>
           <div className="border border-border bg-surface p-3 text-center text-xs text-muted"><span className="font-mono text-lg text-text">{lastRun.eligible_for_automation}</span><br />eligible for automation</div>
-          <div className="border border-border bg-surface p-3 text-center text-xs text-muted"><span className="font-mono text-lg text-teal">3</span><br />payments recovered</div>
+          <div className="border border-border bg-surface p-3 text-center text-xs text-muted"><span className="font-mono text-lg text-teal">{lastRun.recovered_amount ? formatMoney(lastRun.recovered_amount) : "₹0"}</span><br />recovered from Razorpay</div>
           <div className="border border-border bg-surface p-3 text-center text-xs text-muted"><span className="font-mono text-lg text-red">{lastRun.stopped}</span><br />stopped by policy</div>
         </div>
       ) : null}

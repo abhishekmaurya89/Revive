@@ -37,3 +37,16 @@ def update_receivable_fields(invoice_id: str, fields: dict) -> None:
     fields = dict(fields)
     fields["updated_at"] = datetime.now(timezone.utc).isoformat()
     receivables_collection.update_one({"invoice_id": invoice_id}, {"$set": fields})
+
+
+def mark_receivable_recovered(invoice_id: str, recovered_amount: int) -> bool:
+    receivable = get_receivable(invoice_id)
+    if not receivable:
+        return False
+    total_amount = receivable["amount"]
+    status = "recovered" if recovered_amount >= total_amount else "partially_paid"
+    update_receivable_fields(
+        invoice_id,
+        {"status": status, "recovered_amount": recovered_amount},
+    )
+    return True

@@ -3,6 +3,7 @@ from datetime import date, datetime, timezone
 from app.models.receivable import ChaseAction, Receivable, ReceivableStatus
 from app.services.audit import record_audit_event
 from app.services.policy import evaluate_receivable
+from app.services.razorpay_client import client
 from app.services.receivables_repository import (
     get_receivable,
     list_open_receivables,
@@ -81,12 +82,44 @@ def chase_single(invoice_id: str, today: date | None = None) -> dict | None:
     receivable = Receivable(**doc)
     decision = evaluate_receivable(receivable, today)
 
+    payment_link_id = receivable.payment_link_id
+    payment_link = receivable.payment_link
+    if decision.action in {ChaseAction.REMINDER, ChaseAction.CHASE_EMAIL}:
+        if not payment_link_id or not payment_link:
+            customer = {"name": receivable.customer_name}
+            if receivable.customer_email:
+                customer["email"] = receivable.customer_email
+            if receivable.customer_contact:
+                customer["contact"] = receivable.customer_contact
+            response = client.payment_link.create(
+                {
+                    "amount": receivable.amount - receivable.recovered_amount,
+                    "currency": receivable.currency,
+                    "description": f"Payment for invoice {receivable.invoice_id}",
+                    "reference_id": receivable.invoice_id,
+                    "customer": customer,
+                    "notify": {
+                        "email": bool(receivable.customer_email),
+                        "sms": bool(receivable.customer_contact),
+                    },
+                    "reminder_enable": True,
+                    "notes": {"invoice_id": receivable.invoice_id},
+                }
+            )
+            payment_link_id = response.get("id")
+            payment_link = response.get("short_url")
+            if not payment_link_id or not payment_link:
+                raise RuntimeError("Razorpay did not return a receivable payment link")
+
     updates: dict = {}
     if decision.action in _CONTACT_ACTIONS:
         updates["contact_attempts"] = receivable.contact_attempts + 1
         updates["last_contacted_at"] = datetime.now(timezone.utc).isoformat()
     if decision.action in _STATUS_BY_ACTION:
         updates["status"] = _STATUS_BY_ACTION[decision.action].value
+    if payment_link_id and payment_link:
+        updates["payment_link_id"] = payment_link_id
+        updates["payment_link"] = payment_link
     updates["escalation_level"] = decision.escalation_level
 
     if updates:
@@ -101,6 +134,12 @@ def chase_single(invoice_id: str, today: date | None = None) -> dict | None:
             "stopped": decision.stopped,
         },
     )
+    if payment_link_id and payment_link:
+        record_audit_event(
+            "receivable", invoice_id, "payment_link_created",
+            {"payment_link_id": payment_link_id, "payment_link": payment_link},
+            actor="razorpay",
+        )
 
     return {
         "invoice_id": invoice_id,
@@ -108,6 +147,8 @@ def chase_single(invoice_id: str, today: date | None = None) -> dict | None:
         "reason": decision.reason,
         "escalation_level": decision.escalation_level,
         "stopped": decision.stopped,
+        "payment_link_id": payment_link_id,
+        "payment_link": payment_link,
     }
 
 

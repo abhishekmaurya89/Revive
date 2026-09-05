@@ -37,3 +37,17 @@ def mark_recovered(
             }
         },
     )
+
+
+def mark_recovered_by_payment_id(payment_id: str, recovered_amount: int) -> bool:
+    result = recoveries_collection.update_one(
+        {"payment_id": payment_id},
+        {
+            "$set": {
+                "status": "recovered",
+                "recovered_amount": recovered_amount,
+                "recovered_at": datetime.now(timezone.utc),
+            }
+        },
+    )
+    return result.matched_count > 0
